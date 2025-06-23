@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { FaCheck, FaBell, FaUser, FaUsers, FaPlus, FaDollarSign, FaExclamationCircle, FaTimes } from 'react-icons/fa';
+import React, { useState, useEffect, useCallback } from 'react';
+import { FaCheck, FaBell, FaUser, FaUsers, FaPlus, FaExclamationCircle, FaTimes, FaRupeeSign } from 'react-icons/fa';
 
 const ExpenseTracker = () => {
   const [friends, setFriends] = useState([]);
@@ -23,44 +23,9 @@ const ExpenseTracker = () => {
     if (friends.length === 0) {
       setFriends([{ id: 1, name: 'You', isCurrentUser: true }]);
     }
-  }, []);
+  }, [friends.length]);
 
-  useEffect(() => {
-    calculateSettlements();
-  }, [expenses, friends]);
-
-  const addFriend = () => {
-    if (newFriendName.trim()) {
-      const newFriend = {
-        id: Date.now(),
-        name: newFriendName.trim(),
-        isCurrentUser: false
-      };
-      setFriends([...friends, newFriend]);
-      setNewFriendName('');
-      setShowAddFriend(false);
-    }
-  };
-
-  const addExpense = () => {
-    if (newExpense.description && newExpense.amount && newExpense.paidBy && newExpense.splitWith.length > 0) {
-      const expense = {
-        id: Date.now(),
-        description: newExpense.description,
-        amount: parseFloat(newExpense.amount),
-        paidBy: parseInt(newExpense.paidBy),
-        splitWith: newExpense.splitWith.map(id => parseInt(id)),
-        date: new Date().toISOString(),
-        settled: false
-      };
-      setExpenses([...expenses, expense]);
-      setNewExpense({ description: '', amount: '', paidBy: '', splitWith: [] });
-      setShowAddExpense(false);
-      addNotification(`New expense added: ${expense.description} - $${expense.amount}`);
-    }
-  };
-
-  const calculateSettlements = () => {
+  const calculateSettlements = useCallback(() => {
     const balances = {};
     friends.forEach(friend => { balances[friend.id] = 0; });
     expenses.forEach(expense => {
@@ -96,6 +61,41 @@ const ExpenseTracker = () => {
     });
 
     setSettlements(newSettlements);
+  }, [friends, expenses]);
+
+  useEffect(() => {
+    calculateSettlements();
+  }, [calculateSettlements]);
+
+  const addFriend = () => {
+    if (newFriendName.trim()) {
+      const newFriend = {
+        id: Date.now(),
+        name: newFriendName.trim(),
+        isCurrentUser: false
+      };
+      setFriends([...friends, newFriend]);
+      setNewFriendName('');
+      setShowAddFriend(false);
+    }
+  };
+
+  const addExpense = () => {
+    if (newExpense.description && newExpense.amount && newExpense.paidBy && newExpense.splitWith.length > 0) {
+      const expense = {
+        id: Date.now(),
+        description: newExpense.description,
+        amount: parseFloat(newExpense.amount),
+        paidBy: parseInt(newExpense.paidBy),
+        splitWith: newExpense.splitWith.map(id => parseInt(id)),
+        date: new Date().toISOString(),
+        settled: false
+      };
+      setExpenses([...expenses, expense]);
+      setNewExpense({ description: '', amount: '', paidBy: '', splitWith: [] });
+      setShowAddExpense(false);
+      addNotification(`New expense added: ${expense.description} - ₹${expense.amount}`);
+    }
   };
 
   const addNotification = (message, type = 'info') => {
@@ -115,7 +115,7 @@ const ExpenseTracker = () => {
   };
 
   const sendReminder = (settlement) => {
-    addNotification(`Reminder sent to ${settlement.from.name} for $${settlement.amount.toFixed(2)}`, 'warning');
+    addNotification(`Reminder sent to ${settlement.from.name} for ₹${settlement.amount.toFixed(2)}`, 'warning');
   };
 
   const toggleSplitWith = (id) => {
@@ -391,7 +391,7 @@ const ExpenseTracker = () => {
   return (
     <div style={styles.container}>
       <h1 style={styles.header}>
-        <FaDollarSign style={{ color: '#059669' }} />
+        <FaRupeeSign style={{ color: '#059669' }} />
         Group Expense Tracker
       </h1>
       
@@ -450,14 +450,14 @@ const ExpenseTracker = () => {
           <div>
             {expenses.length === 0 ? (
               <div style={styles.emptyState}>
-                <FaDollarSign size={48} style={{ color: '#cbd5e1', marginBottom: '16px' }} />
+                <FaRupeeSign size={48} style={{ color: '#cbd5e1', marginBottom: '16px' }} />
                 <p>No expenses yet. Add your first expense to get started!</p>
               </div>
             ) : (
               expenses.map(e => (
                 <div key={e.id} style={styles.expenseCard}>
                   <div style={styles.expenseTitle}>{e.description}</div>
-                  <div style={styles.expenseAmount}>${e.amount.toFixed(2)}</div>
+                  <div style={styles.expenseAmount}>₹{e.amount.toFixed(2)}</div>
                   <div style={styles.expenseDetails}>
                     <div><strong>Paid by:</strong> {friends.find(f => f.id === e.paidBy)?.name}</div>
                     <div><strong>Split with:</strong> {e.splitWith.map(id => friends.find(f => f.id === id)?.name).join(', ')}</div>
@@ -485,7 +485,7 @@ const ExpenseTracker = () => {
                     <span style={{ color: '#6b7280' }}>owes</span>
                     <FaUser style={{ color: '#6b7280' }} />
                     <span>{s.to.name}</span>
-                    <span style={{ color: '#059669', fontWeight: 'bold' }}>${s.amount.toFixed(2)}</span>
+                    <span style={{ color: '#059669', fontWeight: 'bold' }}>₹{s.amount.toFixed(2)}</span>
                     <span style={{ 
                       color: s.status === 'completed' ? '#059669' : '#f59e0b',
                       fontWeight: '500',
@@ -636,7 +636,7 @@ const ExpenseTracker = () => {
             <input 
               style={styles.input}
               type="number" 
-              placeholder="Amount (e.g., 25.50)"
+              placeholder="Amount (e.g., 250.50)"
               value={newExpense.amount} 
               onChange={(e) => setNewExpense(prev => ({ ...prev, amount: e.target.value }))} 
             />
